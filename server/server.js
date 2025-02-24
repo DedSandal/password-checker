@@ -7,18 +7,30 @@ const PORT = 3000;
 
 app.use(bodyParser.json());
 
-function calculatePasswordStrength(password) {
-    let passwordStrength = 'weak';
+app.use(express.json());
 
-    if (/[a-z]/.test(password) && /[A-Z]/.test(password) && /[0-9]/.test(password) && /[$-/:-?{-~!"^_`\[\]]/.test(password)) {
-        if (password.length >= 12) {
-            passwordStrength = 'strong';
-        } else if (password.length >= 8) {
-            passwordStrength = 'medium';
-        }
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  next();
+});
+
+function calculatePasswordStrength(
+    isCommon,
+    hasRepetitions,
+    hasLowercase,
+    hasUppercase,
+    hasNumber,
+    hasSpecialChar,
+    isMinLength6,
+    isMinLength12
+) {
+    if (isCommon || hasRepetitions || !isMinLength6) return "weak";
+    if (hasLowercase && hasUppercase && hasNumber && hasSpecialChar) {
+        return isMinLength12 ? "strong" : "medium";
     }
-
-    return passwordStrength;
+    return "weak";
 }
 
 function hasRepeatedSequences(password) {
@@ -36,15 +48,25 @@ app.post('/check-password', (req, res) => {
         return res.status(400).json({ error: 'Password is required' });
     }
 
-    const strength = calculatePasswordStrength(password);
     const hasRepetitions = hasRepeatedSequences(password);
     const isCommon = isCommonPassword(password);
     const hasLowercase = /[a-z]/.test(password);
     const hasUppercase = /[A-Z]/.test(password);
     const hasNumber = /[0-9]/.test(password);
     const hasSpecialChar = /[$-/:-?{-~!"^_`\[\]]/.test(password);
+    const isMinLength6 = password.length >= 6;
     const isMinLength8 = password.length >= 8;
     const isMinLength12 = password.length >= 12;
+    const strength = calculatePasswordStrength(
+        isCommon,
+        hasRepetitions,
+        hasLowercase,
+        hasUppercase,
+        hasNumber,
+        hasSpecialChar,
+        isMinLength6,
+        isMinLength12,
+    );
 
     res.json({
         strength,
